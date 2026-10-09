@@ -82,7 +82,7 @@ figure img{display:block;width:100%;height:auto;border-radius:10px;border:1px so
 .phase .pd{display:inline-block;background:#eef3fb;color:var(--accent);border-radius:999px;padding:1px 10px;font-size:.85rem;margin:4px 0}
 .phase p{margin:6px 0;font-size:.93rem}
 .phase .go{color:#2f6fb5;font-weight:700;font-size:.93rem}
-.phase img{width:100%;border-radius:8px;border:1px solid #eee;margin-top:6px}
+.phase img{width:100%;height:auto;border-radius:8px;border:1px solid #eee;margin-top:6px}
 .p2{border-top-color:#2f6fb5}.p3{border-top-color:#2e7d4f}
 .pager{display:flex;justify-content:space-between;gap:10px;margin-top:20px}
 .pager a{flex:1;text-align:center;background:#fff;border:1px solid #d9d3c6;border-radius:12px;padding:10px;color:var(--accent);text-decoration:none;font-weight:700}
