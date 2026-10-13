@@ -444,7 +444,7 @@ function rBow(p){
   return s+labels(p);
 }
 function bowSide(p){
-  var K=1.1, O=[206,118]; function Wp(q){return [O[0]+q[0]*K,O[1]+q[1]*K];} function WA(a){return a.map(Wp);}
+  var K=1.1, O=[176,118]; function Wp(q){return [O[0]+q[0]*K,O[1]+q[1]*K];} function WA(a){return a.map(Wp);}
   var s='';
   s+=pa('M200,0 L212,0 L211,62 Q214,70 215,80 L215,168 Q214,180 211,188 L212,240 L200,240 L201,188 Q198,180 197,168 L197,80 Q198,70 201,62 Z',C.wood,C.woodd,1.6);
   // forearm + sleeve (wrist straight: continues the hand axis)
@@ -498,14 +498,14 @@ function bowBehind(p){
 
 // ---------- draw hand close-up ----------
 // thumb draw, seen from the thumb side; hand points right toward the bow, wrist at local (0,0)
-var TH={I_open:[[90,-16],[130,-18],[152,-12],[167,-4]], I_lock:[[90,-16],[124,4],[128,28],[110,39]],
-  T_open:[[16,22],[57,40],[90,45],[117,48]], T_hook:[[16,22],[57,40],[89,46],[112,58]],
-  M:[[86,-6],[108,20],[98,40],[82,36]], R:[[82,0],[102,24],[90,40],[76,35]], L:[[76,6],[93,26],[83,38],[71,33]]};
+var TH={I_open:[[88,-14],[118,-13],[134,0],[134,16]], I_lock:[[88,-14],[117,-8],[122,16],[106,30]],
+  T_open:[[14,20],[52,32],[84,34],[112,30]], T_hook:[[14,20],[52,32],[84,37],[106,47]],
+  M:[[84,-4],[101,14],[93,30],[80,28]], R:[[80,2],[96,19],[88,32],[76,30]], L:[[74,8],[89,23],[82,33],[71,30]]};
 var MD={ I:[[92,-29],[134,-31],[156,-31],[161,-30]], M:[[97,-8],[141,-9],[156,-9],[161,-8]], R:[[95,12],[135,13],[156,13],[161,13]],
-  L:[[88,30],[114,35],[122,40],[123,45]], T:[[14,-26],[46,-44],[74,-50],[96,-48]]};
+  L:[[86,29],[104,35],[109,43],[103,47]], T:[[14,-26],[46,-44],[74,-50],[96,-48]]};
 function rHand(p){
   var dr=p.dr||0, rel=p.rel||0, hook=p.hook||0, med=p.mode==='med', sy=112, brace=228, s='';
-  var shift=-44*dr-26*(1-hook), cxl=med?156:90, Ox=200-cxl+shift, Oy=med?131:98;
+  var shift=-44*dr-26*(1-hook)-30*cl(rel*1.5,0,1), cxl=med?156:84, Ox=200-cxl+shift, Oy=med?131:92;
   function Wp(q){return [Ox+q[0],Oy+q[1]];} function WA(a){return a.map(Wp);}
   var contact=Ox+cxl, px=hook<0.5?brace:lerp(Math.min(contact,brace),brace,cl(rel*1.8,0,1));
   var pd=cl((brace-px)/94,0,1), ex=brace+40*pd;
@@ -515,7 +515,7 @@ function rHand(p){
   var ax=px+Math.max(0,rel-0.15)*560, arrow=ax<380?arrowSvg([ax,sy],[ax+250,sy]):'';
   if(!med){
     var lk=cl(p.lock||0,0,1)*(1-cl(rel*2.5,0,1)), hk=hook*(1-cl(rel*2,0,1));
-    s+=ln([Wp([-260,30]),Wp([-48,6])],C.near,46,C.nol)+ln([Wp([-56,6]),Wp([6,0])],SK.f,40,SK.o);
+    s+=ln([Wp([-260,4]),Wp([-48,4])],C.near,46,C.nol)+ln([Wp([-56,4]),Wp([6,3])],SK.f,40,SK.o);
     s+=finger(WA(TH.L),[14,12.5,11],{shade:1})+finger(WA(TH.R),[16,14.5,12.5],{shade:1})+finger(WA(TH.M),[17,15.5,13.5],{shade:1});
     s+=blob(WA([[0,-21],[30,-26],[62,-29],[88,-27],[98,-14],[98,6],[88,26],[62,36],[30,34],[2,22]]),SK.f,SK.o,1.6);
     s+=el(Wp([84,-22]),8,5,-10,SK.kn,null);
@@ -527,7 +527,7 @@ function rHand(p){
     var I=lpa(TH.I_open,TH.I_lock,lk);
     s+=finger(WA(I),[19,17.5,15.5],{nail:-1});
     if(has(p,'ring')) s+=tx(add(rc,[0,30]),'扳指',C.gold,12)+tx([296,150],'弦卡在拇指第一关节',C.green,12)+tx([296,166],'（扳指上）',C.green,12)+tx([296,182],'拇指勾住弦、指向弓',C.green,12);
-    if(has(p,'lock')) s+=tx([296,52],'食指压住拇指指甲',C.green,12)+arw([258,58],Wp([118,30]),C.green)+tx([296,182],'中指无名指小指收进掌心',C.green,11);
+    if(has(p,'lock')&&lk>0.5) s+=tx([296,52],'食指压住拇指指甲',C.green,12)+arw([258,58],Wp([118,30]),C.green)+tx([296,182],'中指无名指小指收进掌心',C.green,11);
   } else {
     var hk2=hook*(1-cl(rel*1.6,0,1));
     s+=ln([Wp([-300,24]),Wp([-50,4])],C.near,62,C.nol)+ln([Wp([-58,4]),Wp([6,0])],SK.f,54,SK.o);
