@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>臀肌激活与肋骨复位训练 · 车载体感记录：从零开始的 MVP</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.ct-sec{margin:26px 0 6px;font-size:1.25rem;color:#26385a;border-bottom:2px solid #d9d3c6;padding-bottom:4px;scroll-margin-top:56px}
+.ct-note{background:#fdecea;border:1px solid #f3b9b3;border-left:5px solid #c62828;border-radius:12px;padding:10px 14px;margin:12px 0;font-size:.95rem}
+.ct-note b{color:#b71c1c}
+.card .num.w{flex:0 0 auto;width:auto;min-width:38px;padding:0 8px;border-radius:19px;font-size:.95rem}
+pre{background:#1f2a3a;color:#e8edf5;border-radius:10px;padding:12px 14px;overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:.82rem;line-height:1.55;margin:8px 0 4px}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+p code,li code,td code,.blk code{background:#eef3fb;color:#26385a;padding:1px 6px;border-radius:5px;font-size:.88em}
+pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.buy{color:#1f5fa8;font-weight:600;text-decoration:none;border-bottom:1px solid #cfe0f3;word-break:break-all}
+.buy:hover{color:#c65000;border-bottom-color:#f0c9a0}
+.price{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:700;color:#26385a}
+.blk ul{margin:4px 0 0;padding-left:1.2em}
+.card a{color:#1f5fa8}
+.ok{background:#f0f8f2;border:1px solid #cfe7d6;border-left:5px solid #2e7d4f;border-radius:12px;padding:10px 14px;margin:10px 0;font-size:.95rem}
+.ok b{color:#1b5e20}
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="index.html"><span class="nw">车载体感记录</span> <span class="nw">从零开始的 MVP</span></a></h1>
+  <p>ESP32-S3 · BMI270 IMU · 天工 M10+PPS · TF 卡 · 改装建议报告</p>
+</header>
+<div class="tabs" id="tabs"><a class="" href="index.html">总览</a><a class="" href="phase1.html">第一阶段</a><a class="" href="phase2.html">第二阶段</a><a class="" href="phase3.html">第三阶段</a><a class="" href="shoulder.html">开肩</a><a class="" href="horse_archery.html">骑射</a><a class="" href="week.html">一周安排</a><a class="" href="diet.html">饮食方案</a><a class="" href="skincare.html">护肤</a><a class="on" href="car_telemetry.html">车载</a></div><script>(function(){var t=document.getElementById("tabs"),a=t.querySelector(".on");if(a&&t.scrollWidth>t.clientWidth){t.scrollLeft=a.offsetLeft-(t.clientWidth-a.offsetWidth)/2;}})();</script>
+<nav class="sub">
+  <a href="#goal">1 目标</a>
+  <a href="#bom">2 购买</a>
+  <a href="#soft">3 软件</a>
+  <a href="#wire">4 接线</a>
+  <a href="#power">5 上电</a>
+  <a href="#fw">6 固件</a>
+  <a href="#road">7 路试</a>
+  <a href="#pipe">8 分析</a>
+  <a href="#cars">9 两车</a>
+  <a href="#faq">10 排错</a>
+  <a href="#plan">11 两周</a>
+  <a href="#roles">分工</a>
+</nav>
+<main>
+<div class="intro"><b>写给：</b>Leo（深圳）· MacBook · 零硬件经验 · 有特斯拉 + 一辆燃油车。<br>
+<b>语气：</b>像耐心的工程师朋友坐在你旁边讲。<br>
+<b>价格与链接快照：</b>2026-10（下单前再看一眼现价）。相关文档：<code>HARDWARE.md</code> · <code>SHENZHEN_BOM.md</code> · <code>SCHEMA.md</code> · <code>OPENSOURCE_REUSE.md</code> · <code>TESLA_FLEET_API.md</code>。</div>
+<div class="cue"><b>一句话收尾先放前面：</b>先买对 N16R8 和带 PPS 的 M10 → 桌上串口看到 IMU+GPS → 再写卡上路 → 把目录丢给 <code>run_pipeline.py</code>。PCB 和完美融合都是以后的事。</div>
+
+<h2 class="ct-sec" id="goal">1. 你要做成什么</h2>
+<section class="card info">
+  <h2>一句话目标</h2>
+  <p>做一个「车载黑匣子」：用 ESP32 把 <b>IMU 体感 + GPS</b> 记到 TF 卡，开完车把日志丢进本仓库的 Python 管道，自动出一份「驾驶体感 / 改装建议」报告。</p>
+  <p>MVP <b>不需要 PCB、不需要画板</b>。杜邦线 + 面包板/洞洞板就够。分析管道已经写好，你可以现在就模拟跑通：</p>
+<pre><code>cd /workspace/car-telemetry
+pip install -r requirements.txt
+python3 run_pipeline.py --simulate
+# 看 sample_report.md</code></pre>
+  <p>固件可参考开源 <a href="https://github.com/jctoledo/blackbox" target="_blank" rel="noopener">jctoledo/blackbox</a>（MIT）的思路与标定习惯；我们的传感器组合不同（BMI270 + M10+PPS + SD），所以<b>别整仓硬烧</b>，当参考即可。正式落盘格式以本仓库 <code>SCHEMA.md</code> 为准。</p>
+</section>
+
+<h2 class="ct-sec" id="bom">2. 需要买什么</h2>
+<section class="card info" id="bom-main">
+  <div class="card-head"><span class="num w">2.1</span><div><h2>推荐淘宝 BOM</h2><div class="tag">按这个买就行 · 价格快照 2026-10</div></div></div>
+  <div class="cue"><b>下单前再看一眼现价。</b>商品名可点进淘宝/天猫；拍错规格比省几块钱麻烦得多。</div>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th>#</th><th>用途</th><th>商品</th><th>参考价</th><th>下单注意</th></tr></thead>
+    <tbody>
+      <tr>
+        <td data-label="#">1</td>
+        <td data-label="用途">主控</td>
+        <td data-label="商品"><a class="buy" href="https://detail.tmall.com/item.htm?id=887690740161" target="_blank" rel="noopener">ESP32-S3-DevKitC N16R8</a></td>
+        <td data-label="参考价" class="n"><span class="price">¥17–28</span></td>
+        <td data-label="下单注意"><b>选 N16R8，别选 N8R2</b>（要 16MB Flash + 8MB PSRAM）</td>
+      </tr>
+      <tr>
+        <td data-label="#">2</td>
+        <td data-label="用途">TF 卡座模块</td>
+        <td data-label="商品"><a class="buy" href="https://item.taobao.com/item.htm?id=43580108042" target="_blank" rel="noopener">SPI TF 模块</a></td>
+        <td data-label="参考价" class="n"><span class="price">¥3.4</span></td>
+        <td data-label="下单注意">SPI 六线版即可</td>
+      </tr>
+      <tr>
+        <td data-label="#">3</td>
+        <td data-label="用途">TF 卡</td>
+        <td data-label="商品"><a class="buy" href="https://item.taobao.com/item.htm?id=757139762580" target="_blank" rel="noopener">三星 32G 高耐久</a></td>
+        <td data-label="参考价" class="n"><span class="price">¥65.9</span></td>
+        <td data-label="下单注意">行车记录仪级，耐高温；别用杂牌高速卡</td>
+      </tr>
+      <tr>
+        <td data-label="#">4</td>
+        <td data-label="用途">GNSS</td>
+        <td data-label="商品"><a class="buy" href="https://item.taobao.com/item.htm?id=695200430656" target="_blank" rel="noopener">天工 M10（带 1PPS）</a></td>
+        <td data-label="参考价" class="n"><span class="price">¥38</span></td>
+        <td data-label="下单注意"><b>拍前问卖家</b>：是否 u-blox 芯片、<b>PPS 脚是否引出</b></td>
+      </tr>
+      <tr>
+        <td data-label="#">5</td>
+        <td data-label="用途">IMU</td>
+        <td data-label="商品"><a class="buy" href="https://item.taobao.com/item.htm?id=959669273470" target="_blank" rel="noopener">微嵌 BMI270</a></td>
+        <td data-label="参考价" class="n"><span class="price">¥28</span></td>
+        <td data-label="下单注意">要带排针/杜邦可接的扩展板</td>
+      </tr>
+      <tr>
+        <td data-label="#">6</td>
+        <td data-label="用途">麦克风（第二步）</td>
+        <td data-label="商品"><a class="buy" href="https://detail.tmall.com/item.htm?id=902968800912" target="_blank" rel="noopener">INMP441</a></td>
+        <td data-label="参考价" class="n"><span class="price">¥9.6</span></td>
+        <td data-label="下单注意">I2S MEMS</td>
+      </tr>
+      <tr>
+        <td data-label="#">7</td>
+        <td data-label="用途">车内支架</td>
+        <td data-label="商品"><a class="buy" href="https://item.taobao.com/item.htm?id=560056217573" target="_blank" rel="noopener">斯迈林吸盘支架</a></td>
+        <td data-label="参考价" class="n"><span class="price">¥26.5</span></td>
+        <td data-label="下单注意">行车记录仪款；盒子要能<b>刚性</b>固定</td>
+      </tr>
+      <tr>
+        <td data-label="#">8</td>
+        <td data-label="用途">供电</td>
+        <td data-label="商品"><a class="buy" href="https://detail.tmall.com/item.htm?id=673312814894" target="_blank" rel="noopener">倍思 60W 车充</a></td>
+        <td data-label="参考价" class="n"><span class="price">¥50.9</span></td>
+        <td data-label="下单注意">USB-C 输出给开发板</td>
+      </tr>
+      <tr>
+        <td data-label="#">9</td>
+        <td data-label="用途">燃油车 OBD</td>
+        <td data-label="商品"><a class="buy" href="https://item.taobao.com/item.htm?id=726113513093" target="_blank" rel="noopener">vgate vLinker MC+</a></td>
+        <td data-label="参考价" class="n"><span class="price">¥200</span></td>
+        <td data-label="下单注意"><b>只给燃油车</b>；特斯拉走 Fleet API，不插 OBD</td>
+      </tr>
+    </tbody>
+  </table></div>
+  <div class="dose"><b>预算</b>单盒电子料粗算（不含 OBD）：约 <b>¥240–250</b>。燃油车再加 OBD：再 +¥200 ≈ <b>¥440–450</b>。<br>两辆车若各要一盒：盒子 ×2 + OBD ×1；特斯拉那盒不买 OBD。</div>
+</section>
+
+<section class="card info" id="bom-extra">
+  <div class="card-head"><span class="num w">2.2</span><div><h2>额外小件</h2><div class="tag">淘宝搜现成套装即可</div></div></div>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th>物品</th><th>为什么要</th><th>备注</th></tr></thead>
+    <tbody>
+      <tr><td data-label="物品"><b>杜邦线</b>（公对母 + 母对母各一捆）</td><td data-label="为什么要">模块之间互连</td><td data-label="备注">多买一点，断线很常见</td></tr>
+      <tr><td data-label="物品"><b>面包板或洞洞板</b></td><td data-label="为什么要">临时固定、少焊</td><td data-label="备注">MVP <b>不用 PCB</b></td></tr>
+      <tr><td data-label="物品"><b>USB-C 数据线</b>（能传数据）</td><td data-label="为什么要">烧录 + 串口</td><td data-label="备注">有的线「只充电不传数据」，买两条备用</td></tr>
+      <tr><td data-label="物品"><b>电烙铁</b>（可选）</td><td data-label="为什么要">排针虚焊时补一下</td><td data-label="备注">零经验可先全杜邦；排针已焊好就先别碰烙铁</td></tr>
+      <tr><td data-label="物品"><b>轻触按键</b> ×1～2（可选）</td><td data-label="为什么要">路试时标「好/差」</td><td data-label="备注">也可用开发板上 BOOT 键临时顶替（不推荐长期）</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="card info" id="bom-skip">
+  <div class="card-head"><span class="num w">2.3</span><div><h2>先别买的</h2><div class="tag">MVP 阶段浪费时间</div></div></div>
+  <ul>
+    <li>定制 PCB、钢网、SMT——MVP 阶段浪费时间。</li>
+    <li>廉价「ELM327 v2.1」克隆——PID/速率经常坑；燃油车认准 <b>vLinker MC+</b>。</li>
+    <li>立创裸芯片方案——那是以后画板用的（见 <code>SHENZHEN_BOM.md</code>），现在对零焊接经验不友好。</li>
+  </ul>
+</section>
+
+<h2 class="ct-sec" id="soft">3. 工具软件安装（macOS / MacBook）</h2>
+<div class="cue"><b>卡住了就把报错原文丢给贾维斯。</b>下面每一步做完再进下一步。</div>
+
+<section class="card info" id="ide">
+  <div class="card-head"><span class="num w">3.1</span><div><h2>二选一：Arduino IDE 或 PlatformIO</h2><div class="tag">更新手走 A，更利落走 B</div></div></div>
+  <div class="grid">
+    <div class="blk good"><h3>路线 A — Arduino IDE（推荐你先走这条）</h3>
+      <ol>
+        <li>打开 <a href="https://www.arduino.cc/en/software" target="_blank" rel="noopener">arduino.cc/en/software</a> 下载 macOS 版，拖进「应用程序」。</li>
+        <li>打开 IDE → <b>Settings / 偏好设置</b> → Additional boards manager URLs，加上：<code>https://espressif.github.io/arduino-esp32/package_esp32_index.json</code></li>
+        <li><b>Tools → Board → Boards Manager</b>，搜 <code>esp32</code>，装 <b>esp32 by Espressif Systems</b>（装最新稳定版即可）。</li>
+        <li>板型选：<b>ESP32S3 Dev Module</b>。建议默认：<b>USB CDC On Boot = Enabled</b>，Flash 16MB，PSRAM <b>OPI PSRAM</b>（N16R8），Upload Speed 921600（不稳就改 460800）。</li>
+        <li>库管理器稍后装：<code>Adafruit BMI270</code>（或模块卖家示例用的库）、GPS 可用 TinyGPSPlus；SD 用自带 <code>SD</code>/<code>SD_MMC</code>。具体以后续固件仓库为准。</li>
+      </ol>
+    </div>
+    <div class="blk"><h3>路线 B — PlatformIO（VS Code / Cursor）</h3>
+      <ol>
+        <li>装 <a href="https://code.visualstudio.com/" target="_blank" rel="noopener">VS Code</a> 或继续用 Cursor。</li>
+        <li>扩展市场装 <b>PlatformIO IDE</b>。</li>
+        <li>新建项目：board 选 <code>esp32-s3-devkitc-1</code>，framework <code>arduino</code> 或 <code>espidf</code>。</li>
+        <li>串口监视在 PIO 终端里用 Monitor。</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="card info" id="usb">
+  <div class="card-head"><span class="num w">3.2</span><div><h2>USB 驱动与端口</h2><div class="tag">很多 S3 板 Mac 往往不用装 CH340</div></div></div>
+  <ul>
+    <li>很多 <b>ESP32-S3-DevKitC</b> 用板载 <b>USB-JTAG/Serial</b>，Mac <b>往往不用装 CH340</b>。</li>
+    <li>若卖家板子是 <b>CH340 / CH343</b> 转串口：用 Homebrew 装驱动，或按卖家说明装官方 macOS 驱动；装完重启一次。</li>
+    <li>用数据线把板子插上 Mac，终端执行：</li>
+  </ul>
+<pre><code>ls /dev/cu.*</code></pre>
+  <p>常见会看到 <code>/dev/cu.usbmodem*</code> 或 <code>/dev/cu.wchusbserial*</code>。Arduino 里 <b>Tools → Port</b> 选这一项。</p>
+</section>
+
+<section class="card info" id="serial">
+  <div class="card-head"><span class="num w">3.3</span><div><h2>串口监视器</h2></div></div>
+  <ul>
+    <li>Arduino：<b>Tools → Serial Monitor</b>，波特率先试 <b>115200</b>。</li>
+    <li>也可用：<code>screen /dev/cu.usbmodemXXXX 115200</code>（退出：<code>Ctrl-A</code> 再 <code>K</code>）。</li>
+    <li>上传固件时若提示端口占用，先关掉监视器再点 Upload。</li>
+  </ul>
+</section>
+
+<section class="card info" id="py">
+  <div class="card-head"><span class="num w">3.4</span><div><h2>Python 分析管道（现在就能跑）</h2><div class="tag">硬件还没到也能先熟悉输出</div></div></div>
+<pre><code>cd /workspace/car-telemetry   # 或你电脑上这份仓库的路径
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python3 run_pipeline.py --simulate
+open sample_report.md          # 或用编辑器打开</code></pre>
+  <div class="ok"><b>通过标准：</b>看到「建议 N 条」和报告文件，说明电脑侧已经通了——<b>硬件还没到也能先熟悉输出长什么样</b>。</div>
+</section>
+
+<h2 class="ct-sec" id="wire">4. 接线总表</h2>
+<div class="ct-note"><b>重要：</b>下表引脚是 <b>建议默认，以模块丝印与你到手的 DevKit 丝印为准</b>。ESP32-S3 很多 GPIO 可重映射；接错电源（5V 进 3.3V 模块）会烧掉传感器——<b>电源先对丝印，再接信号线</b>。模块标 <code>VCC/3V3</code> 的接 <b>3.3V</b>；只有明确写 <code>5V</code> 的才接 5V。ESP32-S3 GPIO 是 3.3V 逻辑。</div>
+
+<section class="card info" id="wire-plan">
+  <div class="card-head"><span class="num w">4.1</span><div><h2>阶段策略（请按这个来）</h2></div></div>
+  <div class="cue"><b>第一步只接：IMU + GPS + 电源（+ USB 调试）。</b>麦克风、TF 卡、按键 → <b>第二步</b>再加。一次全接容易排错到崩溃。</div>
+</section>
+
+<section class="card info" id="wire-pwr">
+  <div class="card-head"><span class="num w">4.2</span><div><h2>电源（两阶段通用）</h2></div></div>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th>从</th><th>到</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td data-label="从">车充 / Mac USB-C</td><td data-label="到">ESP32-S3 的 USB-C</td><td data-label="说明">供电 + 烧录</td></tr>
+      <tr><td data-label="从">ESP32 <b>3V3</b></td><td data-label="到">BMI270 VCC、M10 VCC、（第二步）TF 模块若标 3.3V、INMP441 VDD</td><td data-label="说明">共用地</td></tr>
+      <tr><td data-label="从">ESP32 <b>GND</b></td><td data-label="到">所有模块 GND</td><td data-label="说明"><b>必须共地</b>，否则乱码/假数据</td></tr>
+    </tbody>
+  </table></div>
+  <p>车内路试用 <b>倍思车充 → USB-C → 开发板</b>；不要从 OBD 口偷电给盒子（MVP 阶段）。</p>
+</section>
+
+<section class="card info" id="wire-f1">
+  <div class="card-head"><span class="num w">4.3</span><div><h2>第一步：IMU（I2C）+ GPS（UART）+ PPS</h2><div class="tag">建议默认，以模块丝印为准</div></div></div>
+  <h3 style="margin:8px 0 4px;color:#26385a">BMI270（I2C）</h3>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th>BMI270 丝印</th><th>ESP32-S3 GPIO（建议）</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td data-label="BMI270 丝印">VCC / 3V3</td><td data-label="ESP32-S3 GPIO">3V3</td><td data-label="说明"></td></tr>
+      <tr><td data-label="BMI270 丝印">GND</td><td data-label="ESP32-S3 GPIO">GND</td><td data-label="说明"></td></tr>
+      <tr><td data-label="BMI270 丝印">SDA</td><td data-label="ESP32-S3 GPIO"><b>GPIO8</b></td><td data-label="说明">Arduino ESP32-S3 常见默认 SDA</td></tr>
+      <tr><td data-label="BMI270 丝印">SCL</td><td data-label="ESP32-S3 GPIO"><b>GPIO9</b></td><td data-label="说明">常见默认 SCL</td></tr>
+      <tr><td data-label="BMI270 丝印">SDO / ADDR（若有）</td><td data-label="ESP32-S3 GPIO">按模块说明接 GND 或 3V3 选地址</td><td data-label="说明">常见 0x68 / 0x69</td></tr>
+      <tr><td data-label="BMI270 丝印">CS（若模块引出且用于 SPI）</td><td data-label="ESP32-S3 GPIO">接 3V3 强迫 I2C 模式（<b>以说明书为准</b>）</td><td data-label="说明">我们 MVP 先走 I2C，省事</td></tr>
+    </tbody>
+  </table></div>
+  <p style="font-size:.9rem;color:#5b6577"><code>HARDWARE.md</code> 里量产更推荐 SPI 读 IMU；面包板阶段 <b>I2C 足够 100–200 Hz 原型</b>，先跑通再优化。</p>
+  <h3 style="margin:14px 0 4px;color:#26385a">天工 M10（UART + PPS）</h3>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th>M10 丝印</th><th>ESP32-S3 GPIO（建议）</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td data-label="M10 丝印">VCC</td><td data-label="ESP32-S3 GPIO">3V3</td><td data-label="说明">确认模块是 3.3V</td></tr>
+      <tr><td data-label="M10 丝印">GND</td><td data-label="ESP32-S3 GPIO">GND</td><td data-label="说明"></td></tr>
+      <tr><td data-label="M10 丝印">TX</td><td data-label="ESP32-S3 GPIO"><b>GPIO17</b>（接 ESP 的 RX）</td><td data-label="说明">模块 TX → 主控 RX</td></tr>
+      <tr><td data-label="M10 丝印">RX</td><td data-label="ESP32-S3 GPIO"><b>GPIO18</b>（接 ESP 的 TX）</td><td data-label="说明">模块 RX → 主控 TX</td></tr>
+      <tr><td data-label="M10 丝印">PPS / 1PPS</td><td data-label="ESP32-S3 GPIO"><b>GPIO21</b></td><td data-label="说明">上升沿中断；没有 PPS 也能先出 NMEA，但时间戳变差</td></tr>
+      <tr><td data-label="M10 丝印">ANT</td><td data-label="ESP32-S3 GPIO">陶瓷天线已焊则勿扯</td><td data-label="说明">车内天线朝天、少金属遮挡</td></tr>
+    </tbody>
+  </table></div>
+  <p>UART 波特率常见 <b>9600 出厂</b>，固件里再升到 115200（<b>以模块 / u-blox 配置为准</b>）。</p>
+</section>
+
+<section class="card info" id="wire-f2">
+  <div class="card-head"><span class="num w">4.4</span><div><h2>第二步：TF（SPI）+ 麦（I2S）+ 按键</h2><div class="tag">建议默认，以模块丝印为准</div></div></div>
+  <h3 style="margin:8px 0 4px;color:#26385a">SPI TF 模块</h3>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th>TF 模块</th><th>ESP32-S3 GPIO（建议）</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td data-label="TF 模块">VCC</td><td data-label="ESP32-S3 GPIO">3V3 或 5V（<b>看模块</b>；很多 SPI 微卡模块标 5V 但板载 LDO——以丝印为准）</td><td data-label="说明">拿不准先问卖家 / 量一下</td></tr>
+      <tr><td data-label="TF 模块">GND</td><td data-label="ESP32-S3 GPIO">GND</td><td data-label="说明"></td></tr>
+      <tr><td data-label="TF 模块">MISO / DO</td><td data-label="ESP32-S3 GPIO"><b>GPIO13</b></td><td data-label="说明"></td></tr>
+      <tr><td data-label="TF 模块">MOSI / DI</td><td data-label="ESP32-S3 GPIO"><b>GPIO11</b></td><td data-label="说明"></td></tr>
+      <tr><td data-label="TF 模块">SCK / CLK</td><td data-label="ESP32-S3 GPIO"><b>GPIO12</b></td><td data-label="说明"></td></tr>
+      <tr><td data-label="TF 模块">CS</td><td data-label="ESP32-S3 GPIO"><b>GPIO10</b></td><td data-label="说明"></td></tr>
+    </tbody>
+  </table></div>
+  <p>卡先在 Mac 上格式化成 <b>FAT32</b>，再插模块。</p>
+  <h3 style="margin:14px 0 4px;color:#26385a">INMP441</h3>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th>INMP441</th><th>ESP32-S3 GPIO（建议）</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td data-label="INMP441">VDD</td><td data-label="ESP32-S3 GPIO">3V3</td><td data-label="说明"></td></tr>
+      <tr><td data-label="INMP441">GND</td><td data-label="ESP32-S3 GPIO">GND</td><td data-label="说明"></td></tr>
+      <tr><td data-label="INMP441">SCK / BCLK</td><td data-label="ESP32-S3 GPIO"><b>GPIO4</b></td><td data-label="说明"></td></tr>
+      <tr><td data-label="INMP441">WS / LRCL</td><td data-label="ESP32-S3 GPIO"><b>GPIO5</b></td><td data-label="说明"></td></tr>
+      <tr><td data-label="INMP441">SD / DOUT</td><td data-label="ESP32-S3 GPIO"><b>GPIO6</b></td><td data-label="说明"></td></tr>
+      <tr><td data-label="INMP441">L/R</td><td data-label="ESP32-S3 GPIO">GND（选左声道，常见做法）</td><td data-label="说明">以模块说明为准</td></tr>
+    </tbody>
+  </table></div>
+  <h3 style="margin:14px 0 4px;color:#26385a">按键（标注好/差）</h3>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th>按键</th><th>ESP32-S3</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td data-label="按键">一端</td><td data-label="ESP32-S3"><b>GPIO14</b></td><td data-label="说明">内部上拉，按下接 GND</td></tr>
+      <tr><td data-label="按键">另一端</td><td data-label="ESP32-S3">GND</td><td data-label="说明">短按 GOOD / 长按 BAD（固件约定，可改）</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="card info" id="wire-check">
+  <div class="card-head"><span class="num w">4.5</span><div><h2>接线检查清单（通电前）</h2></div></div>
+  <ol>
+    <li>所有模块 <b>共地</b>。</li>
+    <li>没有把 5V 接到只标 3.3V 的脚。</li>
+    <li>GPS 的 TX/RX <b>交叉</b>（模块 TX→ESP RX）。</li>
+    <li>杜邦线插紧；面包板孔别松。</li>
+    <li>第一步：<b>先不要插 TF 和麦克风</b>，减少变量。</li>
+  </ol>
+</section>
+
+<h2 class="ct-sec" id="power">5. 第一次上电检查（冒烟 / 串口）</h2>
+<section class="card info">
+  <h2>按这个顺序做</h2>
+  <ol>
+    <li><b>只插 ESP32</b>（传感器先不接）→ USB 连 Mac → 选对端口 → 烧一个「Blink / Hello Serial」示例。</li>
+    <li>串口 115200 看到 <code>Hello</code> → USB 线、驱动、板型 OK。</li>
+    <li>断电，按 §4.3 接上 <b>BMI270 + M10</b>。再上电：板子不发烫、无焦糊味。若发烫 → <b>立刻拔 USB</b>，查电源反接。</li>
+    <li>烧「只读 IMU」的最小草图（或后续给的 <code>scan_i2c</code>）：应扫到 BMI270 地址（常见 0x68/0x69）。</li>
+    <li>烧 GPS 透传：串口应刷 NMEA（<code>$GNGGA</code> / <code>$GNRMC</code> 一类）。天线朝窗，室内首次定位可能要几分钟。</li>
+    <li>有 PPS 时：示波器更好；没有的话固件里对 GPIO21 做中断计数，每秒大约 +1 即正常。</li>
+  </ol>
+  <div class="ok"><b>通过标准（第一步）：</b>串口持续打印 IMU 三轴 + GPS 有 <code>fix</code>（或至少有 NMEA）→ 可以进入写卡与路试准备。</div>
+</section>
+
+<h2 class="ct-sec" id="fw">6. 最小固件：读 IMU + GPS，串口和 SD 写 CSV</h2>
+<div class="cue"><b>分阶段，别一次写完美融合。</b></div>
+
+<section class="card info" id="f0">
+  <div class="card-head"><span class="num w">F0</span><div><h2>串口证明活着</h2></div></div>
+  <p>伪代码：</p>
+<pre><code>setup:
+  Serial.begin(115200)
+  Wire.begin(8, 9)          # SDA, SCL — 建议默认，以你板子为准
+  imu.begin()
+  gpsSerial.begin(9600, RX=17, TX=18)  # 建议默认
+
+loop:
+  读 accel/gyro → Serial.printf
+  读一行 NMEA → Serial.print
+  delay 适当（IMU 可 10ms 一帧做 100Hz 目标）</code></pre>
+</section>
+
+<section class="card info" id="f1">
+  <div class="card-head"><span class="num w">F1</span><div><h2>符合 SCHEMA 的 CSV（先串口，再 SD）</h2></div></div>
+  <p>目标文件（见 <code>SCHEMA.md</code>）：</p>
+<pre><code>imu.csv   t_utc, ax_g, ay_g, az_g, gx_dps, gy_dps, gz_dps, roll_deg, pitch_deg
+gps.csv   t_utc, lat, lon, speed_kmh, fix, hdop
+meta.json vehicle / annotations / firmware / mount_calib</code></pre>
+  <p>伪代码：</p>
+<pre><code>setup:
+  同上 + SD.begin(CS=10)     # 第二步接上 TF 后再开
+  打开 /imu.csv /gps.csv 写表头
+  若有 PPS: attachInterrupt(PPS_PIN, onPps, RISING)
+
+onPps:
+  记下 esp_timer 微秒，与下一包 UTC 秒绑定
+
+loop @ 100Hz:
+  采样 IMU，换成 g / dps，粗算 roll/pitch（可先静态公式）
+  t_utc = 由 GPS+PPS 推出来的时间（没有 PPS 就用 GPS 时间 + 本地晶振外推）
+  append imu.csv 一行
+  若有新的 NAV-PVT / RMC: append gps.csv 一行
+  同时 Serial 打一行心跳（方便你看着不像死机）</code></pre>
+</section>
+
+<section class="card info" id="f2">
+  <div class="card-head"><span class="num w">F2</span><div><h2>参考 blackbox，但别整仓照搬</h2></div></div>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th>可借鉴</th><th>不要照搬</th></tr></thead>
+    <tbody>
+      <tr><td data-label="可借鉴">停稳熄火再标定；重力定 z、直线加速定 x</td><td data-label="不要照搬">WT901 UART 驱动、ESP32-C3 引脚</td></tr>
+      <tr><td data-label="可借鉴">驾驶模式阈值思路（加速/刹车/过弯）</td><td data-label="不要照搬">无 SD 的会话导出当主存储</td></tr>
+      <tr><td data-label="可借鉴">u-blox UBX 配置思路</td><td data-label="不要照搬">NEO-6M 默认波特率假设</td></tr>
+    </tbody>
+  </table></div>
+  <p>后续会给「对口 BMI270 + M10 + SD」的固件包；你现在用 F0/F1 验证硬件即可。</p>
+  <div class="dose"><b>坐标系提醒（写进习惯）</b>车体系：<b>x 前、y 左、z 上</b>；<code>ax_g</code> 加速为正、刹车为负；<code>ay_g</code> 左弯为正。装车方向尽量让模块箭头/丝印朝车头，后面标定会省很多事。</div>
+</section>
+
+<h2 class="ct-sec" id="road">7. 车内安装与第一次路试</h2>
+<section class="card info" id="mount">
+  <div class="card-head"><span class="num w">7.1</span><div><h2>吸盘位置</h2></div></div>
+  <ol>
+    <li>斯迈林吸盘贴在挡风玻璃下方、<b>尽量靠近车辆中线</b>，不要挡视线、不要挡气囊区域。</li>
+    <li>盒子（开发板+模块）用扎带/3D 打印小壳固定在支架上——<b>IMU 必须刚性</b>，吸盘软晃会制造假振动。</li>
+    <li>GPS 天线朝天、少被金属 A 柱挡住。</li>
+    <li>USB-C 走线避开踩踏区，用车充供电；起步前线材整理好。</li>
+  </ol>
+</section>
+
+<section class="card info safety" id="safe-drive">
+  <div class="card-head"><span class="num w">7.2</span><div><h2>安全</h2></div></div>
+  <ul>
+    <li><b>开车时不要低头看串口、不要调杜邦线。</b>一切设置在停车熄火状态做完。</li>
+    <li>第一趟选熟悉、车少的路，15–20 分钟即可。</li>
+    <li>盒子松动就停车再固定，不要边开边摸。</li>
+  </ul>
+</section>
+
+<section class="card info" id="privacy">
+  <div class="card-head"><span class="num w">7.3</span><div><h2>隐私</h2></div></div>
+  <ul>
+    <li>日志含轨迹与时间，<b>当敏感数据</b>：TF 卡、导出目录别随手上云公开仓库。</li>
+    <li>语音（第二步麦克风）可能录到车内对话——默认本地存储，分享前先听/删。</li>
+    <li>特斯拉 Fleet API 后续会涉及令牌与车辆位置，见 <code>TESLA_FLEET_API.md</code> 与 <code>SECURITY_AND_AUTOMATION.md</code>。</li>
+  </ul>
+</section>
+
+<section class="card info" id="first-trip">
+  <div class="card-head"><span class="num w">7.4</span><div><h2>第一次路试步骤</h2></div></div>
+  <ol>
+    <li>停车、点火或仅 ON 挡，车上电，等 GPS <b>fix</b>（串口或 LED 约定）。</li>
+    <li><b>静止 10 秒</b>（标定重力/零偏；习惯对齐 blackbox「停稳再 CLR」）。</li>
+    <li>正常开一段含：直线加速、轻轻刹车、一个弯。</li>
+    <li>回来拔 TF（先断电），在 Mac 上看是否有 <code>imu.csv</code> / <code>gps.csv</code>。</li>
+    <li>拷贝到 <code>data/trip1/</code>，手写一个简单 <code>meta.json</code>：</li>
+  </ol>
+<pre><code>{
+  "vehicle": {"type": "ice", "name": "Leo-ICE"},
+  "annotations": [],
+  "firmware": "mvp-f1",
+  "mount_calib": {"note": "吸盘中线，第一次路试"}
+}</code></pre>
+  <p>特斯拉那趟把 <code>type</code> 改成 <code>"tesla"</code> 即可（OBD/API 文件可后补）。</p>
+</section>
+
+<h2 class="ct-sec" id="pipe">8. 把日志丢进 Python 分析管道出报告</h2>
+<section class="card info">
+  <h2>跑管道</h2>
+<pre><code>cd /workspace/car-telemetry
+source .venv/bin/activate          # 若已建虚拟环境
+# 目录里应有 imu.csv gps.csv meta.json；可选 obd.csv / tesla.csv
+python3 run_pipeline.py --data data/trip1 --out data/trip1/report.md</code></pre>
+  <p>没有实车数据时继续：</p>
+<pre><code>python3 run_pipeline.py --simulate
+# → sample_report.md</code></pre>
+  <p>管道会做：对齐时钟（<code>align.py</code>）→ 提特征（侧倾梯度、刹车点头等）→ 规则建议 → Markdown 报告。<br>
+  列名必须符合 <code>SCHEMA.md</code>；对不上时先改 CSV 表头或叫贾维斯写个小转换脚本。</p>
+</section>
+
+<h2 class="ct-sec" id="cars">9. 特斯拉 / 燃油车两条路</h2>
+<section class="card info">
+  <h2>两辆车都要「体感盒子」</h2>
+  <p>差别在<b>车辆总线数据</b>从哪来。</p>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th></th><th>特斯拉</th><th>燃油车（ICE）</th></tr></thead>
+    <tbody>
+      <tr><td data-label=""><b>体感盒子</b></td><td data-label="特斯拉">要（IMU+GPS+SD）</td><td data-label="燃油车（ICE）">要（同一套）</td></tr>
+      <tr><td data-label=""><b>车速/油门等</b></td><td data-label="特斯拉"><b>Tesla Fleet API / Telemetry</b>（后续）</td><td data-label="燃油车（ICE）"><b>vLinker MC+</b> 蓝牙 OBD</td></tr>
+      <tr><td data-label=""><b>MVP 现在</b></td><td data-label="特斯拉">先只记盒子；API 配置见 <code>TESLA_FLEET_API.md</code></td><td data-label="燃油车（ICE）">可先只记盒子；有 OBD 后再 <code>obd.csv</code></td></tr>
+      <tr><td data-label=""><b>管道</b></td><td data-label="特斯拉">同目录放 <code>tesla.csv</code></td><td data-label="燃油车（ICE）">同目录放 <code>obd.csv</code></td></tr>
+    </tbody>
+  </table></div>
+  <div class="grid" style="margin-top:12px">
+    <div class="blk"><h3>特斯拉（后续，不必第一周做完）</h3>
+      <ol>
+        <li>按 <code>TESLA_FLEET_API.md</code> 申请/配置 Fleet API、Telemetry。</li>
+        <li>用 <code>cartel.ingest</code> 一类方法把遥测转成 <code>tesla.csv</code>。</li>
+        <li>与盒子日志一起 <code>run_pipeline.py</code>——管道会估计设备时钟偏移。</li>
+      </ol>
+    </div>
+    <div class="blk"><h3>燃油车 OBD（有 vLinker 之后）</h3>
+      <ol>
+        <li>手机或电脑按说明书与 <b>vLinker MC+</b> 配对（BLE / 经典蓝牙以设备为准）。</li>
+        <li>插入车辆 OBD-II 口（一般在方向盘下方）；点火。</li>
+        <li>原型阶段可用笔记本 + <code>python-OBD</code> 记 <code>obd.csv</code>（见 README）；ESP32 直连 BLE 是增强项，不是第一周必做。</li>
+        <li>采样目标：车速/油门/转速等约 2–5 Hz（受 ECU 限制）。</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<h2 class="ct-sec" id="faq">10. 常见坑与排错</h2>
+<section class="card info">
+  <h2>先查什么</h2>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th>现象</th><th>先查什么</th></tr></thead>
+    <tbody>
+      <tr><td data-label="现象">串口无设备</td><td data-label="先查什么">换能传数据的 USB-C 线；换口；CH340 板装驱动</td></tr>
+      <tr><td data-label="现象">上传失败 / 超时</td><td data-label="先查什么">按住 BOOT 再按 RESET 进下载；降低 Upload Speed；关掉 Serial Monitor</td></tr>
+      <tr><td data-label="现象">I2C 扫不到 BMI270</td><td data-label="先查什么">共地？SDA/SCL 对调试一下；地址 0x68/0x69；供电是否 3.3V</td></tr>
+      <tr><td data-label="现象">GPS 一直无 fix</td><td data-label="先查什么">天线朝窗/户外；供电；TX/RX 是否交叉；波特率是否仍是 9600</td></tr>
+      <tr><td data-label="现象">NMEA 乱码</td><td data-label="先查什么">波特率不对；地线虚接；USB 与模块同时供电造成回流问题（共地）</td></tr>
+      <tr><td data-label="现象">SD 初始化失败</td><td data-label="先查什么">卡是否 FAT32；CS 脚；有的模块要 5V；杜邦太长信号差就减短</td></tr>
+      <tr><td data-label="现象">车里一颠数据疯抖</td><td data-label="先查什么">吸盘软、盒子晃 → 加强刚性固定</td></tr>
+      <tr><td data-label="现象">报告特征离谱</td><td data-label="先查什么">安装方向反了；未做静止标定；CSV 单位不是 g/dps</td></tr>
+      <tr><td data-label="现象">Mac 读卡慢/不认</td><td data-label="先查什么">用正经读卡器；先安全弹出再拔</td></tr>
+      <tr><td data-label="现象">买错板</td><td data-label="先查什么">主控必须 <b>N16R8</b>；M10 必须问清 <b>PPS</b></td></tr>
+    </tbody>
+  </table></div>
+  <div class="cue"><b>排错口诀：</b>一次只改一样（线、库、波特率、供电），改完记笔记。</div>
+</section>
+
+<h2 class="ct-sec" id="plan">11. 建议的两周节奏</h2>
+<section class="card info" id="week1">
+  <h2>第 1 周 — 买齐、电脑侧跑通、桌上点亮</h2>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th>天</th><th>你做什么</th></tr></thead>
+    <tbody>
+      <tr><td data-label="天"><b>D1</b></td><td data-label="你做什么">按下单清单拍下 §2.1 + 杜邦/面包板/数据线；同时 Mac 上跑通 <code>run_pipeline.py --simulate</code></td></tr>
+      <tr><td data-label="天"><b>D2–D3</b></td><td data-label="你做什么">到货拆包；只接 ESP32，Hello Serial + Blink</td></tr>
+      <tr><td data-label="天"><b>D4–D5</b></td><td data-label="你做什么">接 IMU+GPS；I2C 扫描 + NMEA；完成 §5</td></tr>
+      <tr><td data-label="天"><b>D6–D7</b></td><td data-label="你做什么">最小固件 F0：串口同时打 IMU+GPS；整理接线照片发贾维斯复盘</td></tr>
+    </tbody>
+  </table></div>
+</section>
+<section class="card info" id="week2">
+  <h2>第 2 周 — 写卡、上路、出第一份真车报告</h2>
+  <div class="tw"><table class="t stack">
+    <thead><tr><th>天</th><th>你做什么</th></tr></thead>
+    <tbody>
+      <tr><td data-label="天"><b>D8–D9</b></td><td data-label="你做什么">接 TF；F1 写 <code>imu.csv</code>/<code>gps.csv</code>；桌上晃一晃看文件增长</td></tr>
+      <tr><td data-label="天"><b>D10</b></td><td data-label="你做什么">吸盘装车；停车场静止标定；短途路试</td></tr>
+      <tr><td data-label="天"><b>D11</b></td><td data-label="你做什么">日志进 <code>run_pipeline.py</code>；读报告，标出不合理处</td></tr>
+      <tr><td data-label="天"><b>D12</b></td><td data-label="你做什么">（可选）接按键/麦克风；或燃油车配对 vLinker 试记 <code>obd.csv</code></td></tr>
+      <tr><td data-label="天"><b>D13–D14</b></td><td data-label="你做什么">再跑一趟对比；特斯拉 API 只做阅读 <code>TESLA_FLEET_API.md</code>，不阻塞盒子</td></tr>
+    </tbody>
+  </table></div>
+  <p>若某一天卡超过 2 小时：停，把现象 + 接线照片 + 串口日志留给贾维斯，不要硬刚到凌晨。</p>
+</section>
+
+<h2 class="ct-sec" id="roles">你自己做 vs 贾维斯下一步帮你做</h2>
+<section class="card info">
+  <div class="grid">
+    <div class="blk good"><h3>你来做（动手与决策）</h3>
+      <ul>
+        <li>淘宝下单、收货验货（尤其 M10 问 PPS / 芯片）。</li>
+        <li>Mac 装 Arduino/PIO、驱动、跑通模拟管道。</li>
+        <li>按表接线、第一次上电、桌面点亮 IMU+GPS。</li>
+        <li>吸盘装车、安全驾驶路试、拷贝 TF 卡数据。</li>
+        <li>读报告，用「体感」判断哪几条建议靠谱。</li>
+      </ul>
+    </div>
+    <div class="blk"><h3>贾维斯接着帮你（你开口即可）</h3>
+      <ul>
+        <li>对口 <b>BMI270 + M10+PPS + SD</b> 的可编译固件草图（PlatformIO/Arduino），按 <code>SCHEMA.md</code> 写 CSV。</li>
+        <li>根据你模块<b>实际丝印照片</b>改引脚宏，避免盲猜。</li>
+        <li><code>meta.json</code> / 列名不对时的转换脚本；报告读不懂时的解读。</li>
+        <li>特斯拉 Fleet API 配置清单与 <code>tesla.csv</code> 接入。</li>
+        <li>vLinker + <code>python-OBD</code> 最小采集脚本。</li>
+        <li>以后若要画板：从 <code>SHENZHEN_BOM.md</code> 立创料号升级，而不是现在纠结 SMT。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="card info" style="background:#fff8e1;border:1px solid #f0dca0">
+  <h2>一句话收尾</h2>
+  <p style="margin:0">先买对 N16R8 和带 PPS 的 M10 → 桌上串口看到 IMU+GPS → 再写卡上路 → 把目录丢给 <code>run_pipeline.py</code>。PCB 和完美融合都是以后的事。</p>
+  <p style="margin:8px 0 0">有问题把<b>照片 + 串口原文</b>丢过来就行。</p>
+</section>
+
+<section class="card info safety" id="safety">
+  <h2>安全提示</h2>
+  <ul>
+    <li>开车时不要低头看串口、不要调杜邦线；一切设置在停车熄火状态做完。</li>
+    <li>接错电源（5V 进 3.3V 模块）会烧掉传感器；发烫立即拔 USB。</li>
+    <li>日志含轨迹与时间，当敏感数据，不要随手上云公开仓库。</li>
+  </ul>
+</section>
+</main>
+<footer>臀肌激活与肋骨复位训练 · 车载体感记录</footer>
+</body>
+</html>
